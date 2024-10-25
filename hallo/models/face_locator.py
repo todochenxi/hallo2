@@ -64,7 +64,7 @@ class FaceLocator(ModelMixin):
         block_out_channels: Tuple[int] = (16, 32, 64, 128),
     ):
         super().__init__()
-        self.conv_in = InflatedConv3d(
+        self.conv_in = InflatedConv3d(  # b, c, f, h, w -> bf, c, h, w
             conditioning_channels, block_out_channels[0], kernel_size=3, padding=1
         )
 

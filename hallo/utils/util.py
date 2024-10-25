@@ -421,7 +421,7 @@ def get_landmark(file):
         face_landmarker_result = landmarker.detect(image)
         face_landmark = compute_face_landmarks(
             face_landmarker_result, height, width)
-
+    print("============>landmark", face_landmark)
     return np.array(face_landmark), height, width
 
 

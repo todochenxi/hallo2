@@ -105,7 +105,7 @@ class Net(nn.Module):
         self.face_locator = face_locator
         self.reference_control_writer = reference_control_writer
         self.reference_control_reader = reference_control_reader
-        self.imageproj = imageproj
+        self.imageproj = imageproj  # norm(linear(clip_emb_dim, clip_extention_emb_dim*cross_emb_dim))
 
     def forward(
         self,

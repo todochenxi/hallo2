@@ -241,13 +241,14 @@ class ImageProcessorForDataProcessing():
             Exits a runtime context and handles any exceptions that occurred during the processing.
     """
     def __init__(self, face_analysis_model_path, landmark_model_path, step) -> None:
-        if step == 2:
-            self.face_analysis = FaceAnalysis(
+        self.detector = FaceAnalysis(
                 name="",
                 root=face_analysis_model_path,
                 providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
             )
-            self.face_analysis.prepare(ctx_id=0, det_size=(640, 640))
+        self.detector.prepare(ctx_id=0, det_size=(640, 640))
+        if step == 2:
+            self.face_analysis = self.detector
             self.landmarker = None
         else:
             BaseOptions = mp.tasks.BaseOptions
@@ -261,6 +262,115 @@ class ImageProcessorForDataProcessing():
             )
             self.landmarker = FaceLandmarker.create_from_options(options)
             self.face_analysis = None
+
+    def get_face(self, image_path):
+        # image_name = os.path.basename(image_path)
+        source_image = Image.open(image_path)
+        ref_image_pil = source_image.convert("RGB")
+
+
+        faces = self.detector.get(cv2.cvtColor(np.array(ref_image_pil.copy()), cv2.COLOR_RGB2BGR))
+
+        # print(faces[0].keys())
+        faces_sorted = sorted(faces, key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]), reverse=True)
+        face = faces_sorted[0]  # Select the largest face
+        # rimg = face_analysis.draw_on(cv2.cvtColor(np.array(ref_image_pil.copy()), cv2.COLOR_RGB2BGR), faces)
+        # cv2.imwrite(f"./data{image_name}_draw.jpg", rimg)
+        print(face["bbox"])
+        return ref_image_pil, face
+    
+    def face_center_crop(self, input_dir, output_dir, height=512, width=512):
+        first_frame = True
+        fist_frame_center_x = 0
+        crop_top, crop_bottom, crop_left, crop_right = 0, 0, 0, 0  # 初始化裁剪边界
+        path_lis = []
+        pil_lis = []
+        # i = 0
+        for frame in sorted(os.listdir(input_dir)):
+            # i += 1
+            # if i == 27:
+            #     break
+            frame_path = os.path.join(input_dir, frame)
+            ref_image_pil, face = self.get_face(frame_path)
+            
+            ref_image_np = np.array(ref_image_pil)
+            x1, y1, x2, y2 = face["bbox"]
+            face_width = x2 - x1
+            face_height = y2 - y1
+            center_x = x1 + face_width // 2
+            center_y = y1 + face_height // 2
+
+            # 只在第一帧计算裁剪边界
+            if first_frame:
+                fist_frame_center_x = center_x
+                # 计算offset 和 crop_size
+                offset = int(face_width * 1.5)
+            # 固定的裁剪大小
+            crop_size = max(offset * 2, face_height)
+
+            # 计算裁剪区域的初始边界
+            crop_top = int(center_y - crop_size // 2)
+            crop_bottom = crop_top + crop_size
+
+            # 检查顶部是否超过边界
+            if crop_top < 0:
+                crop_bottom += -crop_top  # 向下扩展以适应顶部边界
+                crop_top = 0  # 顶部固定在0
+
+            # 检查底部是否超过边界
+            if crop_bottom > ref_image_np.shape[0]:
+                crop_bottom = ref_image_np.shape[0]  # 底部固定在图像高度
+                crop_top = crop_bottom - crop_size  # 重新计算crop_top，确保高度固定
+
+            # 左右边界的处理
+            crop_left = int(center_x - crop_size // 2)
+            crop_right = crop_left + crop_size
+
+            # 检查左右边界
+            if crop_left < 0:
+                crop_right += -crop_left  # 向右扩展以适应左边界
+                crop_left = 0  # 左边固定在0
+
+            if crop_right > ref_image_np.shape[1]:
+                crop_right = ref_image_np.shape[1]  # 右边固定在图像宽度
+                crop_left = crop_right - crop_size  # 重新计算crop_left，确保宽度固定
+
+                first_frame = False  # 设置为False，后续帧不再重新计算
+            print(center_x)
+            if center_x < (fist_frame_center_x - 50) or center_x > (fist_frame_center_x + 50):
+                break
+            # 计算新的裁剪边界，确保人脸不会被裁剪
+            face_x1 = face["bbox"][0]
+            face_x2 = face["bbox"][2]
+            face_y1 = face["bbox"][1]
+            face_y2 = face["bbox"][3]
+
+            # 检查边界并适当扩展，如果无法扩展则退出循环
+            if face_x1 < crop_left or face_x2 > crop_right or face_y1 < crop_top or face_y2 > crop_bottom:
+                print(f"人脸靠近裁剪边界，停止处理帧: {frame}")
+                break  # 退出循环
+
+            # 根据新的边界裁剪图像
+            ref_image_np = ref_image_np[crop_top:crop_bottom, crop_left:crop_right, :]
+
+
+            # 最后，调整到512x512
+            ref_image_pil = Image.fromarray(ref_image_np)
+            ref_image_pil = ref_image_pil.resize([width, height], Image.LANCZOS)
+
+            # 保存处理后的图像
+            os.makedirs(output_dir, exist_ok=True)
+            frame_path = os.path.join(output_dir, frame)
+            path_lis.append(frame_path)
+            pil_lis.append(ref_image_pil)
+        useful_time = len(path_lis) // 25
+        # save
+        for path, pil in zip(path_lis[:useful_time*25:], pil_lis[:useful_time*25]):
+            pil.save(path)
+        # remove
+        all_frames = [os.path.join(input_dir, frame) for frame in sorted(os.listdir(input_dir))]
+        for path in all_frames[useful_time*25:]:
+            os.remove(path)
 
     def preprocess(self, source_image_path: str):
         """
@@ -278,15 +388,15 @@ class ImageProcessorForDataProcessing():
         if self.face_analysis:
             for frame in sorted(os.listdir(source_image_path)):
                 try:
-                    source_image = Image.open(
-                        os.path.join(source_image_path, frame))
-                    ref_image_pil = source_image.convert("RGB")
-                    # 2.1 detect face
-                    faces = self.face_analysis.get(cv2.cvtColor(
-                        np.array(ref_image_pil.copy()), cv2.COLOR_RGB2BGR))
-                    # use max size face
-                    face = sorted(faces, key=lambda x: (
-                        x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]))[-1]
+                    source_image_path = os.path.join(source_image_path, frame)
+                    _, face = self.get_face(source_image_path)
+                    # ref_image_pil = source_image.convert("RGB")
+                    # # 2.1 detect face
+                    # faces = self.face_analysis.get(cv2.cvtColor(
+                    #     np.array(ref_image_pil.copy()), cv2.COLOR_RGB2BGR))
+                    # # use max size face
+                    # face = sorted(faces, key=lambda x: (
+                    #     x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1]))[-1]
                     # 2.2 face embedding
                     face_emb = face["embedding"]
                     if face_emb is not None:
@@ -295,6 +405,9 @@ class ImageProcessorForDataProcessing():
                     continue
 
         if self.landmarker:
+            # face_center_crop
+            self.face_center_crop(source_image_path, source_image_path)
+
             # 3.1 get landmark
             landmarks, height, width = get_landmark_overframes(
                 self.landmarker, source_image_path)

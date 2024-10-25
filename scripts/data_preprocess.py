@@ -106,8 +106,9 @@ def process_single_video(video_path: Path,
             _, face_emb, _, _, _ = image_processor.preprocess(images_dir)
             torch.save(face_emb, str(
                 dirs["face_emb"] / f"{video_path.stem}.pt"))
+            useful_frame_len = len(os.listdir(images_dir))
             audio_emb, _ = audio_processor.preprocess(audio_path)
-            torch.save(audio_emb, str(
+            torch.save(audio_emb[:useful_frame_len], str(
                 dirs["audio_emb"] / f"{video_path.stem}.pt"))
     except Exception as e:
         logging.error(f"Failed to process video {video_path}: {e}")

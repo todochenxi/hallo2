@@ -267,7 +267,7 @@ class TalkingVideoDataset(Dataset):
         pixel_values_vid = self.augmentation(frame_list, self.pixel_transform, state)
 
         pixel_values_mask = self.augmentation(tgt_mask_pil, self.cond_transform, state)
-        pixel_values_mask = pixel_values_mask.repeat(3, 1, 1)
+        pixel_values_mask = pixel_values_mask.repeat(3, 1, 1) # 扩展到三通道
 
         pixel_values_face_mask = [
             self.augmentation(face_masks_list, self.attn_transform_64, state),
