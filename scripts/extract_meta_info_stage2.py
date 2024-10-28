@@ -77,7 +77,7 @@ def construct_paths(video_path: str, base_dir: str, new_dir: str, new_ext: str) 
     return str(video_path).replace(base_dir, new_dir).replace(".mp4", new_ext)
 
 
-def extract_meta_info(video_path: str) -> dict:
+def extract_meta_info(video_path: str, dataset_name) -> dict:
     """
     Extract meta information for a given video file.
 
@@ -88,20 +88,21 @@ def extract_meta_info(video_path: str) -> dict:
         dict: A dictionary containing the meta information for the video.
     """
     mask_path = construct_paths(
-        video_path, "videos", "face_mask", ".png")
+        video_path, dataset_name, "face_mask", ".png")
     sep_mask_border = construct_paths(
-        video_path, "videos", "sep_pose_mask", ".png")
+        video_path, dataset_name, "sep_pose_mask", ".png")
     sep_mask_face = construct_paths(
-        video_path, "videos", "sep_face_mask", ".png")
+        video_path, dataset_name, "sep_face_mask", ".png")
     sep_mask_lip = construct_paths(
-        video_path, "videos", "sep_lip_mask", ".png")
+        video_path, dataset_name, "sep_lip_mask", ".png")
     face_emb_path = construct_paths(
-        video_path, "videos", "face_emb", ".pt")
-    audio_path = construct_paths(video_path, "videos", "audios", ".wav")
+        video_path, dataset_name, "face_emb", ".pt")
+    audio_path = construct_paths(video_path, dataset_name, "audios", ".wav")
     vocal_emb_base_all = construct_paths(
-        video_path, "videos", "audio_emb", ".pt")
-
+        video_path, dataset_name, "audio_emb", ".pt")
     assert_flag = True
+
+    
 
     if not file_exists(mask_path):
         print(f"Mask path not found: {mask_path}")
@@ -125,9 +126,14 @@ def extract_meta_info(video_path: str) -> dict:
         print(f"Vocal embedding base all not found: {vocal_emb_base_all}")
         assert_flag = False
 
-    video_frames = VideoReader(video_path, ctx=cpu(0))
+    # video_frames = VideoReader(video_path, ctx=cpu(0))
+    dirname = os.path.dirname(os.path.dirname(video_path))
+    basename = os.path.basename(video_path.replace(".mp4", ""))
+    images_path = os.path.join(dirname, "images", basename)
+    frames_lens = len(os.listdir(images_path))
     audio_emb = torch.load(vocal_emb_base_all)
-    if abs(len(video_frames) - audio_emb.shape[0]) > 3:
+    print(frames_lens, audio_emb.shape)
+    if abs(frames_lens - audio_emb.shape[0]) > 3:
         print(f"Frame count mismatch for video: {video_path}")
         assert_flag = False
 
@@ -136,7 +142,7 @@ def extract_meta_info(video_path: str) -> dict:
         print(f"Face embedding is None for video: {video_path}")
         assert_flag = False
 
-    del video_frames, audio_emb
+    del audio_emb
 
     if assert_flag:
         return {
@@ -169,13 +175,13 @@ def main():
     if args.meta_info_name is None:
         args.meta_info_name = args.dataset_name
 
-    video_dir = Path(args.root_path) / "videos"
+    video_dir = Path(args.root_path) / args.dataset_name
     video_paths = get_video_paths(video_dir, [".mp4"])
 
     meta_infos = []
 
     for video_path in tqdm(video_paths, desc="Extracting meta info"):
-        meta_info = extract_meta_info(video_path)
+        meta_info = extract_meta_info(video_path, args.dataset_name)
         if meta_info:
             meta_infos.append(meta_info)
 

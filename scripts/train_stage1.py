@@ -44,7 +44,8 @@ from omegaconf import OmegaConf
 from PIL import Image
 from torch import nn
 from tqdm.auto import tqdm
-
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hallo.animate.face_animate_static import StaticPipeline
 from hallo.datasets.mask_image import FaceMaskDataset
 from hallo.models.face_locator import FaceLocator

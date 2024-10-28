@@ -3,7 +3,7 @@ data:
   train_width: 512
   train_height: 512
   meta_paths:
-    - "./data/HDTF_meta.json"
+    - "./data/test_stage1.json"
   # Margin of frame indexes between ref and tgt images
   sample_margin: 30
 

@@ -285,6 +285,8 @@ class ImageProcessorForDataProcessing():
         crop_top, crop_bottom, crop_left, crop_right = 0, 0, 0, 0  # 初始化裁剪边界
         path_lis = []
         pil_lis = []
+        offset_size = 1 if os.path.basename(input_dir) in ['0454', '0455', '0456', '0457', '0458', '0459', '0464', '0465', '0536', '1541', '1543', '1544', '1589', '1590', '1591', '2538', '2691', '2712', '2754', '2777', '2942', '3217', '3219', '3220', '3221', '3222', '3224', '3225', '3226', '3227', '3229', '3230', '3231', '3232', '3235', '3236', '3237', '3238', '3240', '3755', '3954', '3995', '4074', '4110', '4128', '4129', '4130'] else 1.2
+
         # i = 0
         for frame in sorted(os.listdir(input_dir)):
             # i += 1
@@ -304,7 +306,7 @@ class ImageProcessorForDataProcessing():
             if first_frame:
                 fist_frame_center_x = center_x
                 # 计算offset 和 crop_size
-                offset = int(face_width * 1.5)
+                offset = int(face_width * offset_size)
             # 固定的裁剪大小
             crop_size = max(offset * 2, face_height)
 

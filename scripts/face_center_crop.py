@@ -151,67 +151,9 @@ def face_center_crop(input_dir, output_dir, height=512, width=512):
     #     os.remove(path)
 
 import shutil
-def crop_image(face, offset_size, frame_path, height, width):
-    x1, y1, x2, y2 = face["bbox"]
-    face_width = x2 - x1
-    face_height = y2 - y1
-    center_x = x1 + face_width // 2
-    center_y = y1 + face_height // 2
-
-    
-    fist_frame_center_x = center_x
-    # 计算offset 和 crop_size
-    offset = int(face_width * offset_size)
-    # 固定的裁剪大小
-    crop_size = max(offset * 2, face_height)
-
-    # 计算裁剪区域的初始边界
-    crop_top = int(center_y - crop_size // 2)
-    crop_bottom = crop_top + crop_size
-
-    # 检查顶部是否超过边界
-    if crop_top < 0:
-        crop_bottom += -crop_top  # 向下扩展以适应顶部边界
-        crop_top = 0  # 顶部固定在0
-
-    # 检查底部是否超过边界
-    if crop_bottom > height:
-        print("crop_bottom>ref_imagenp.shape[0]")
-        crop_bottom = height  # 底部固定在图像高度
-        crop_top = crop_bottom - crop_size  # 重新计算crop_top，确保高度固定
-
-    # 左右边界的处理
-    crop_left = int(center_x - crop_size // 2)
-    crop_right = crop_left + crop_size
-
-    # 检查左右边界
-    if crop_left < 0:
-        crop_right += -crop_left  # 向右扩展以适应左边界
-        crop_left = 0  # 左边固定在0
-
-    if crop_right > width:
-        crop_right = width  # 右边固定在图像宽度
-        crop_left = crop_right - crop_size  # 重新计算crop_left，确保宽度固定
 
 
-    
-    # first_frame = False  # 设置为False，后续帧不再重新计算
-    # print(center_x)
-    # if center_x < (fist_frame_center_x - 50) or center_x > (fist_frame_center_x + 50):
-    #     break
-    # 计算新的裁剪边界，确保人脸不会被裁剪
-    face_x1 = face["bbox"][0]
-    face_x2 = face["bbox"][2]
-    face_y1 = face["bbox"][1]
-    face_y2 = face["bbox"][3]
-
-    # # 检查边界并适当扩展，如果无法扩展则退出循环
-    # if face_x1 < crop_left or face_x2 > crop_right or face_y1 < crop_top or face_y2 > crop_bottom:
-    #     print(f"人脸靠近裁剪边界，停止处理帧: {frame}")
-    #     break  # 退出循环
-    # print(crop_right-crop_left, crop_bottom - crop_top)
-
-def check_crop(input_dir, output_dir, height=512, width=512):
+def check_crop(input_dir, output_dir, error_output_dir, height=512, width=512, offset_size=1.5):
     fist_frame_center_x = 0
     crop_top, crop_bottom, crop_left, crop_right = 0, 0, 0, 0  # 初始化裁剪边界
     path_lis = []
@@ -223,23 +165,60 @@ def check_crop(input_dir, output_dir, height=512, width=512):
         #     break
         frame_path = os.path.join(input_dir, frame)
         ref_image_pil, face = get_face(frame_path)
-        
+        x1, y1, x2, y2 = face["bbox"]
+        face_width = x2 - x1
+        face_height = y2 - y1
+        center_x = x1 + face_width // 2
+        center_y = y1 + face_height // 2
+
         ref_image_np = np.array(ref_image_pil)
-        offset = 1.5
-        crop_top, crop_bottom, crop_left, crop_right = crop_image(face, offset, frame_path, ref_image_np.shape[0], ref_image_np.shape[1])
-        # 根据新的边界裁剪图像
+
+        # offset_size = 1.5
+        offset = int(face_width * offset_size)
+        # 固定的裁剪大小
+        crop_size = max(offset * 2, face_height)
+
+        # 计算裁剪区域的初始边界
+        crop_top = int(center_y - crop_size // 2)
+        crop_bottom = crop_top + crop_size
+
+        # 检查顶部是否超过边界
+        if crop_top < 0:
+            crop_bottom += -crop_top  # 向下扩展以适应顶部边界
+            crop_top = 0  # 顶部固定在0
+
+        # 检查底部是否超过边界
+        if crop_bottom > ref_image_np.shape[0]:
+            print("crop_bottom>ref_imagenp.shape[0]")
+            crop_bottom = ref_image_np.shape[0]  # 底部固定在图像高度
+            crop_top = crop_bottom - crop_size  # 重新计算crop_top，确保高度固定
+
+        # 左右边界的处理
+        crop_left = int(center_x - crop_size // 2)
+        crop_right = crop_left + crop_size
+
+        # 检查左右边界
+        if crop_left < 0:
+            crop_right += -crop_left  # 向右扩展以适应左边界
+            crop_left = 0  # 左边固定在0
+
+        if crop_right > ref_image_np.shape[1]:
+            crop_right = ref_image_np.shape[1]  # 右边固定在图像宽度
+            crop_left = crop_right - crop_size  # 重新计算crop_left，确保宽度固定
+            # 根据新的边界裁剪图像
+        
         ref_image_np = ref_image_np[crop_top:crop_bottom, crop_left:crop_right, :]
 
 
 
         # 最后，调整到512x512
         ref_image_pil = Image.fromarray(ref_image_np)
-        ref_image_pil = ref_image_pil.resize([width, height], Image.LANCZOS)
+        ref_image_pil = ref_image_pil.resize([width//2, height//2], Image.NEAREST)
 
         # 保存处理后的图像
         os.makedirs(output_dir, exist_ok=True)
         crop_frame_path = os.path.join(output_dir, frame)
-        ref_image_pil.save(crop_frame_path)
+        ref_image_pil.save(crop_frame_path, "JPEG", quality=10)
         
         # check_face
         try:
@@ -250,10 +229,11 @@ def check_crop(input_dir, output_dir, height=512, width=512):
             print("height, width==>",ref_image_np.shape[0], ref_image_np.shape[1])
             print(crop_left, crop_right, crop_top, crop_bottom)
             print(frame)
-            # os.makedirs("error_msg", exist_ok=True)
-            # new_path = os.path.join("error_msg", frame)
-            # shutil.copy(frame_path, new_path)
-            continue
+            os.makedirs(error_output_dir, exist_ok=True)
+            new_path = os.path.join(error_output_dir, frame)
+            shutil.copy(frame_path, new_path)
+            os.remove(crop_frame_path)
+            # continue
         # path_lis.append(frame_path)
         # pil_lis.append(ref_image_pil)
     print("error num", i)
@@ -264,6 +244,14 @@ def check_crop(input_dir, output_dir, height=512, width=512):
     # remove
     # for path in path_lis[useful_time*25:]:
     #     os.remove(path)
+
+def test_resize(image_path, output_path):
+    image_pil = Image.open(image_path)
+    image_pil = image_pil.resize([256, 256], Image.NEAREST)
+    image_pil.save(output_path, "JPEG", quality=50)
+
+
+
 
 if __name__ == "__main__":
     # convert video to image
@@ -294,16 +282,26 @@ if __name__ == "__main__":
     # input_dir = "/data3/ml/hallo/test_data/test_0001"
     # output_dir = "/data3/ml/hallo/test_data/invalids"
 
-    input_dir = "error_msg"
-    output_dir = "error_msg_crop"
+    input_dir = "/data2/datasets/hallo/hallo_data/first_frame"
+    output_dir = "/data2/datasets/hallo/hallo_data/first_frame_offset_1.2"
+    error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
+
+    input_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
+    output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset_1"
+    error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2"
+
+    # input_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2"
+    # output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2_offset_0.8"
+    # error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset3"
+
     face_analysis = FaceAnalysis(
         name = "",
-        root="../../pretrained_models/face_analysis",
+        root="../pretrained_models/face_analysis",
         providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
     )
 
     face_analysis.prepare(ctx_id=0, det_size=(640, 640))
-    check_crop(input_dir, output_dir)
+    check_crop(input_dir, output_dir, error_output_dir, offset_size=1)
 
     # _, face = get_face("data/test_crop/0001.png")
     # area = (face["bbox"][2] - face["bbox"][0]) * (face["bbox"][3] - face["bbox"][1])
@@ -312,4 +310,7 @@ if __name__ == "__main__":
     # face_height = y2 - y1
     # print(face_width/face_height)
     # print(area/512/512)
-    # get_fisrst_frame("/data2/datasets/hallo/hdtf", "./hdtf_fist_frame")
+
+    # get_fisrst_frame("/data2/datasets/hallo/hallo_data/videos", "/data2/datasets/hallo/hallo_data/first_frame")
+    
+    # test_resize("/data3/ml/hallo/hallo/self_learning/hdtf_fist_frame_crop/RD_Radio1_000_first_frame.jpg","RD_Radio1_000_first_frame.jpg")
