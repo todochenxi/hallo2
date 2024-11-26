@@ -32,6 +32,7 @@ from typing import List, Tuple
 
 import diffusers
 import torch
+import torchaudio
 import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
@@ -51,6 +52,8 @@ from torchvision import transforms
 from PIL import Image
 import numpy as np
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
+from moviepy.editor import AudioFileClip
 
 from hallo.animate.face_animate import FaceAnimatePipeline
 from hallo.datasets.audio_processor import AudioProcessor
@@ -369,6 +372,7 @@ def log_validation(
         generator = torch.manual_seed(42)
 
         save_path = os.path.join(save_dir, f"{global_step}_{Path(ref_img_path).name}")
+        
 
         for t in range(times):
             print(f"[{t+1}/{times}]")
@@ -444,8 +448,27 @@ def log_validation(
         audio_name = os.path.basename(audio_path).split('.')[0]
         ref_name = os.path.basename(ref_img_path).split('.')[0]
         output_file = os.path.join(save_path,f"{global_step}_{ref_name}_{audio_name}.mp4")
+        os.makedirs(save_path, exist_ok=True)
         # save the result after all iteration
         tensor_to_video(tensor_result, output_file, audio_path)
+        
+        # video
+        video_tensor = tensor_result.permute(1, 0, 2, 3).cpu().numpy()
+        video_tensor = np.clip(video_tensor * 255, 0, 255).astype(np.uint8)
+        writer.add_video(f"{global_step}_{ref_name}_{audio_name}.mp4", torch.tensor(video_tensor).unsqueeze(0), global_step=global_step, fps=25)
+        # audio
+        # 读取 WAV 文件
+        # waveform, sample_rate = torchaudio.load(audio_path)
+
+        # # 如果音频数据是多通道（例如立体声），选择第一个通道
+        # if waveform.ndimension() > 1:
+        #     waveform = waveform[0, :]  # 选择第一个通道
+            
+        # # 如果音频值不在 [-1, 1] 范围内，进行归一化
+        # if waveform.max() > 1.0 or waveform.min() < -1.0:
+        #     waveform = waveform / waveform.max()  # 或者使用其他方法进行归一化
+        # writer.add_audio(f"{global_step}_{ref_name}_{audio_name}.wav", waveform, global_step=global_step, sample_rate=sample_rate)
+        
 
 
     # clean up
@@ -593,7 +616,7 @@ def train_stage2_process(cfg: argparse.Namespace) -> None:
 
     m,u = net.load_state_dict(
         torch.load(
-            os.path.join(cfg.audio_ckpt_dir, "net-3000.pth"),
+            os.path.join(cfg.audio_ckpt_dir, "net.pth"),
             map_location="cpu",
         ),
         strict=False
@@ -1048,4 +1071,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = load_config(args.config)
+    writer = SummaryWriter(f"{config.output_dir}/{config.exp_name}/runs")
     train_stage2_process(config)
+    writer.close()

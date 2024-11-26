@@ -78,7 +78,8 @@ from decord import VideoReader, cpu
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
-
+import os
+import numpy as np
 
 class TalkingVideoDataset(Dataset):
     """
@@ -210,7 +211,15 @@ class TalkingVideoDataset(Dataset):
             f"{self.audio_type}_emb_{self.audio_model}_{self.audio_features}"
         ]
         tgt_mask_pil = Image.open(mask_path)
-        video_frames = VideoReader(video_path, ctx=cpu(0))
+        useful_frames_dir = os.path.join(os.path.dirname(os.path.dirname(video_path)), "images", os.path.basename(video_path.replace(".mp4", "")))
+        frame_files = sorted([os.path.join(useful_frames_dir, f) for f in os.listdir(useful_frames_dir)])
+        useful_frames = [np.array(Image.open(frame)) for frame in frame_files]
+
+        # 转换为与decord读取的格式一致的张量
+        video_frames = np.stack(useful_frames)  # 与VideoReader保持一致的张量形状
+
+        # video_frames = VideoReader(video_path, ctx=cpu(0))
+        # print(video_frames, '=============>')
         assert tgt_mask_pil is not None, "Fail to load target mask."
         assert (video_frames is not None and len(video_frames) > 0), "Fail to load video frames."
         video_length = len(video_frames)
@@ -227,8 +236,7 @@ class TalkingVideoDataset(Dataset):
         videos = video_frames[start_idx : start_idx + self.n_sample_frames]
 
         frame_list = [
-            Image.fromarray(video).convert("RGB") for video in videos.asnumpy()
-        ]
+            Image.fromarray(video).convert("RGB") for video in videos]
 
         face_masks_list = [Image.open(face_mask_union_path)] * self.n_sample_frames
         lip_masks_list = [Image.open(lip_mask_union_path)] * self.n_sample_frames
@@ -253,13 +261,13 @@ class TalkingVideoDataset(Dataset):
             self.n_motion_frames,
             video_length - self.n_sample_frames - self.audio_margin - 1,
         )
-        ref_img = video_frames[ref_img_idx].asnumpy()
+        ref_img = video_frames[ref_img_idx]
         ref_img = Image.fromarray(ref_img)
 
         if self.n_motion_frames > 0:
             motions = video_frames[start_idx - self.n_motion_frames : start_idx]
             motion_list = [
-                Image.fromarray(motion).convert("RGB") for motion in motions.asnumpy()
+                Image.fromarray(motion).convert("RGB") for motion in motions
             ]
 
         # transform

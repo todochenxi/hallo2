@@ -7,6 +7,8 @@ import subprocess
 import torch.nn.functional as F
 from pathlib import Path
 import os
+# from hallo.utils.util import convert_video_to_images, extract_audio_from_videos
+
 def convert_video_to_images(video_path, output_dir):
     ffmpeg_command = [
         'ffmpeg',
@@ -213,12 +215,11 @@ def check_crop(input_dir, output_dir, error_output_dir, height=512, width=512, o
 
         # 最后，调整到512x512
         ref_image_pil = Image.fromarray(ref_image_np)
-        ref_image_pil = ref_image_pil.resize([width//2, height//2], Image.NEAREST)
-
+        ref_image_pil = ref_image_pil.resize((width, height), Image.LANCZOS)
         # 保存处理后的图像
         os.makedirs(output_dir, exist_ok=True)
         crop_frame_path = os.path.join(output_dir, frame)
-        ref_image_pil.save(crop_frame_path, "JPEG", quality=10)
+        ref_image_pil.save(crop_frame_path, "JPEG", quality=95)
         
         # check_face
         try:
@@ -251,48 +252,74 @@ def test_resize(image_path, output_path):
     image_pil.save(output_path, "JPEG", quality=50)
 
 
+def extract_audio_from_videos(video_path: Path, audio_output_path: Path) -> Path:
+    """
+    Extract audio from a video file and save it as a WAV file.
 
+    This function uses ffmpeg to extract the audio stream from a given video file and saves it as a WAV file
+    in the specified output directory.
 
+    Args:
+        video_path (Path): The path to the input video file.
+        output_dir (Path): The directory where the extracted audio file will be saved.
+
+    Returns:
+        Path: The path to the extracted audio file.
+
+    Raises:
+        subprocess.CalledProcessError: If the ffmpeg command fails to execute.
+    """
+    ffmpeg_command = [
+        'ffmpeg', '-y',
+        '-i', str(video_path),
+        '-vn', '-acodec',
+        "pcm_s16le", '-ar', '16000', '-ac', '2',
+        str(audio_output_path)
+    ]
+
+    try:
+        print(f"Running command: {' '.join(ffmpeg_command)}")
+        subprocess.run(ffmpeg_command, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error extracting audio from video: {e}")
+        raise
+
+    return audio_output_path
+
+def get_error_index(images_dir):
+    print("process images::", images_dir)
+    for image in sorted(os.listdir(images_dir)):
+        image_path = os.path.join(images_dir, image)
+        try:
+            _, _ = get_face(image_path)
+        except Exception as e:
+            print("==>", image_path)
+            return True
+    return False
 if __name__ == "__main__":
+
     # convert video to image
     # convert_video_to_images(Path("data/woman.mp4"), Path("data/woman"))
-    # image_path = "data/1080.jpg"
-    # # clip_path = "data/512.jpg"
-    # face1 = get_face(image_path)
-    # face2 = get_face(clip_path)
-    # emb1 = face1["embedding"]
-    # emb2 = face2["embedding"]
-    # emb1 = torch.tensor(emb1, dtype=torch.float32)
-    # emb2 = torch.tensor(emb2, dtype=torch.float32)
 
-    # # 确保两个向量是二维的，形状为[1, -1]，即每个向量作为一个单独的样本
-    # emb1 = emb1.unsqueeze(0)
-    # emb2 = emb2.unsqueeze(0)
 
-    # # 计算余弦相似度
-    # similarity = F.cosine_similarity(emb1, emb2)
-
-    # # 输出余弦相似度的值
-    # print(similarity.item())
-    # # print(face["embedding"])
-    # video_path = Path("data/man.mp4")
-    # output_dir = Path("data/man")
+    # video_path = Path("/data2/datasets/hallo/hallo_data/30h/videos/0655.mp4")
+    # output_dir = Path("/data2/datasets/hallo/hallo_data/30h/images/0655")
     # convert_video_to_images(video_path, output_dir)
 
     # input_dir = "/data3/ml/hallo/test_data/test_0001"
     # output_dir = "/data3/ml/hallo/test_data/invalids"
 
-    input_dir = "/data2/datasets/hallo/hallo_data/first_frame"
-    output_dir = "/data2/datasets/hallo/hallo_data/first_frame_offset_1.2"
-    error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
+    # input_dir = "/data2/datasets/hallo/hallo_data/first_frame"
+    # output_dir = "/data2/datasets/hallo/hallo_data/first_frame_offset_1.2"
+    # error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
 
-    input_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
-    output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset_1"
-    error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2"
+    # input_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset"
+    # output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset_1"
+    # error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2"
 
-    # input_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2"
-    # output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset2_offset_0.8"
-    # error_output_dir = "/data2/datasets/hallo/hallo_data/first_frame_error_offset3"
+    # input_dir = "../examples/test"
+    # output_dir = "../examples/test_out"
+    # error_output_dir = "../examples/first_frame_error_offset3"
 
     face_analysis = FaceAnalysis(
         name = "",
@@ -301,7 +328,19 @@ if __name__ == "__main__":
     )
 
     face_analysis.prepare(ctx_id=0, det_size=(640, 640))
-    check_crop(input_dir, output_dir, error_output_dir, offset_size=1)
+    file_lis = sorted(os.listdir("/data3/datasets/hallo/hallo_data/30h/images/"))
+    segment_size = len(file_lis) //10
+    begin = 10
+    end = 10
+    del_lis = []
+    
+    for index in file_lis[segment_size*begin:len(file_lis)]:
+        flag = get_error_index(f"/data3/datasets/hallo/hallo_data/30h/images/{index}")
+        if flag:
+            del_lis.append(index)
+    print(del_lis)
+        
+    # check_crop(input_dir, output_dir, error_output_dir, offset_size=1.5)
 
     # _, face = get_face("data/test_crop/0001.png")
     # area = (face["bbox"][2] - face["bbox"][0]) * (face["bbox"][3] - face["bbox"][1])
@@ -314,3 +353,4 @@ if __name__ == "__main__":
     # get_fisrst_frame("/data2/datasets/hallo/hallo_data/videos", "/data2/datasets/hallo/hallo_data/first_frame")
     
     # test_resize("/data3/ml/hallo/hallo/self_learning/hdtf_fist_frame_crop/RD_Radio1_000_first_frame.jpg","RD_Radio1_000_first_frame.jpg")
+    # extract_audio_from_videos("../chen.training.MP4", "../examples/driving_audios/chen.wav")

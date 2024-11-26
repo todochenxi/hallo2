@@ -276,7 +276,7 @@ class ImageProcessorForDataProcessing():
         face = faces_sorted[0]  # Select the largest face
         # rimg = face_analysis.draw_on(cv2.cvtColor(np.array(ref_image_pil.copy()), cv2.COLOR_RGB2BGR), faces)
         # cv2.imwrite(f"./data{image_name}_draw.jpg", rimg)
-        print(face["bbox"])
+        # print(face["bbox"])
         return ref_image_pil, face
     
     def face_center_crop(self, input_dir, output_dir, height=512, width=512):
@@ -338,8 +338,9 @@ class ImageProcessorForDataProcessing():
                 crop_left = crop_right - crop_size  # 重新计算crop_left，确保宽度固定
 
                 first_frame = False  # 设置为False，后续帧不再重新计算
-            print(center_x)
+            # print(center_x)
             if center_x < (fist_frame_center_x - 50) or center_x > (fist_frame_center_x + 50):
+                print(f"人脸中心偏移过大，停止处理帧: {frame_path}")
                 break
             # 计算新的裁剪边界，确保人脸不会被裁剪
             face_x1 = face["bbox"][0]
@@ -349,7 +350,7 @@ class ImageProcessorForDataProcessing():
 
             # 检查边界并适当扩展，如果无法扩展则退出循环
             if face_x1 < crop_left or face_x2 > crop_right or face_y1 < crop_top or face_y2 > crop_bottom:
-                print(f"人脸靠近裁剪边界，停止处理帧: {frame}")
+                print(f"人脸靠近裁剪边界，停止处理帧: {frame_path}")
                 break  # 退出循环
 
             # 根据新的边界裁剪图像

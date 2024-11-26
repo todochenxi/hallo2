@@ -1,15 +1,15 @@
 data:
   train_bs: 4
   val_bs: 1
-  train_width: 512
-  train_height: 512
+  train_width: 128
+  train_height: 128
   fps: 25
   sample_rate: 16000
   n_motion_frames: 2
   n_sample_frames: 14
   audio_margin: 2
   train_meta_paths:
-    - "./data/hdtf_split_stage2.json"
+    - "./data/test_stage2.json"
 
 wav2vec_config:
   audio_type: "vocals" # audio vocals
@@ -25,7 +25,7 @@ solver:
   mixed_precision: "no"
   enable_xformers_memory_efficient_attention: True
   gradient_checkpointing: True
-  max_train_steps: 30000
+  max_train_steps: 10
   max_grad_norm: 1.0
   # lr
   learning_rate: 1e-5
@@ -41,7 +41,7 @@ solver:
   adam_epsilon: 1.0e-8
 
 val:
-  validation_steps: 1000
+  validation_steps: 2
 
 noise_scheduler_kwargs:
   num_train_timesteps: 1000
@@ -100,7 +100,7 @@ noise_offset: 0.05
 snr_gamma: 5.0
 enable_zero_snr: True
 
-audio_ckpt_dir: ./pretrained_models/hallo
+audio_ckpt_dir: ./pretrained_models/hallo2
 
 
 single_inference_times: 10
@@ -112,10 +112,10 @@ mask_rate: 0.25
 
 seed: 42
 resume_from_checkpoint: "latest"
-checkpointing_steps: 500
+checkpointing_steps: 2
 
 exp_name: "stage2_long"
-output_dir: "./exp_output"
+output_dir: "./test_exp_output"
 
 ref_img_path:
   - "./examples/reference_images/1.jpg"

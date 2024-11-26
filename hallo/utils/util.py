@@ -310,7 +310,6 @@ def tensor_to_video(tensor, output_video_file, audio_source, fps=25):
     tensor = np.clip(tensor * 255, 0, 255).astype(
         np.uint8
     )  # to [0, 255]
-
     def make_frame(t):
         # get index
         frame_index = min(int(t * fps), tensor.shape[0] - 1)

@@ -1,7 +1,7 @@
 data:
   train_bs: 8
-  train_width: 512
-  train_height: 512
+  train_width: 128
+  train_height: 128
   meta_paths:
     - "./data/test_stage1.json"
   # Margin of frame indexes between ref and tgt images
@@ -12,7 +12,7 @@ solver:
   mixed_precision: "no"
   enable_xformers_memory_efficient_attention: True
   gradient_checkpointing: False
-  max_train_steps: 30000
+  max_train_steps: 10
   max_grad_norm: 1.0
   # lr
   learning_rate: 1.0e-5
@@ -28,7 +28,7 @@ solver:
   adam_epsilon: 1.0e-8
 
 val:
-  validation_steps: 500
+  validation_steps: 2
 
 noise_scheduler_kwargs:
   num_train_timesteps: 1000
@@ -51,9 +51,9 @@ face_locator_pretrained: False
 
 seed: 42
 resume_from_checkpoint: "latest"
-checkpointing_steps: 500
+checkpointing_steps: 2
 exp_name: "stage1"
-output_dir: "./exp_output"
+output_dir: "./test_exp_output"
 
 ref_image_paths:
   - "examples/reference_images/1.jpg"

@@ -78,6 +78,8 @@ def process_single_video(video_path: Path,
     try:
         if step == 1:
             images_output_dir = output_dir / 'images' / video_path.stem
+            if os.path.exists(images_output_dir):
+                return
             images_output_dir.mkdir(parents=True, exist_ok=True)
             images_output_dir = convert_video_to_images(
                 video_path, images_output_dir)

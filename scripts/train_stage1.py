@@ -64,6 +64,7 @@ warnings.filterwarnings("ignore")
 check_min_version("0.10.0.dev0")
 
 logger = get_logger(__name__, log_level="INFO")
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Net(nn.Module):
@@ -279,6 +280,9 @@ def log_validation(
             save_dir, f"{global_step:06d}-{ref_name}_{mask_name}.jpg"
         )
         canvas.save(out_file)
+        canvas_np = np.array(canvas)
+        canvas_tensor = torch.from_numpy(canvas_np).permute(2, 0, 1).float() / 255.0
+        writer.add_image(f"{global_step:06d}-{ref_name}_{mask_name}.jpg", canvas_tensor, global_step)
 
     del pipe
     del ori_net
@@ -786,9 +790,12 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str,
                         default="./configs/train/stage1.yaml")
     args = parser.parse_args()
-
+    
     try:
         config = load_config(args.config)
+        writer = SummaryWriter(f"{config.output_dir}/{config.exp_name}/runs")
         train_stage1_process(config)
+        
     except Exception as e:
         logging.error("Failed to execute the training process: %s", e)
+    writer.close()
