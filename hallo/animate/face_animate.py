@@ -410,7 +410,7 @@ class FaceAnimatePipeline(DiffusionPipeline):
                     motion_scale=motion_scale,
                     return_dict=False,
                 )[0]
-
+                
                 # perform guidance
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)

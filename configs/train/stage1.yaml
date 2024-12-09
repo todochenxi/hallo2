@@ -1,9 +1,9 @@
 data:
   train_bs: 8
-  train_width: 128
-  train_height: 128
+  train_width: 512
+  train_height: 512
   meta_paths:
-    - "./data/test_stage1.json"
+    - "./data/videos_stage1.json"
   # Margin of frame indexes between ref and tgt images
   sample_margin: 30
 
@@ -12,7 +12,7 @@ solver:
   mixed_precision: "no"
   enable_xformers_memory_efficient_attention: True
   gradient_checkpointing: False
-  max_train_steps: 10
+  max_train_steps: 30000
   max_grad_norm: 1.0
   # lr
   learning_rate: 1.0e-5
@@ -28,7 +28,7 @@ solver:
   adam_epsilon: 1.0e-8
 
 val:
-  validation_steps: 2
+  validation_steps: 1000
 
 noise_scheduler_kwargs:
   num_train_timesteps: 1000
@@ -51,13 +51,13 @@ face_locator_pretrained: False
 
 seed: 42
 resume_from_checkpoint: "latest"
-checkpointing_steps: 2
+checkpointing_steps: 1000
 exp_name: "stage1"
-output_dir: "./test_exp_output"
+output_dir: "/data/models/hallo/test2/"
 
 ref_image_paths:
   - "examples/reference_images/1.jpg"
 
 mask_image_paths:
-  - "examples/masks/1.png"
+  - "examples/masks/1_offset.png"
 

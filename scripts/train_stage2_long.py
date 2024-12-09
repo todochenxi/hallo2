@@ -576,13 +576,42 @@ def train_stage2_process(cfg: argparse.Namespace) -> None:
         context_tokens=32,
     ).to(device="cuda", dtype=weight_dtype)
 
+    denoising_unet.load_state_dict(
+        torch.load(
+            os.path.join(cfg.stage1_ckpt_dir, f"denoising_unet-{cfg.stage1_ckpt_step}.pth"),
+            map_location="cpu",
+        ),
+        strict=False
+    )
+    face_locator.load_state_dict(
+        torch.load(
+            os.path.join(cfg.stage1_ckpt_dir, f"face_locator-{cfg.stage1_ckpt_step}.pth"),
+            map_location="cpu",
+        ),
+        strict=False
+    )
+    imageproj.load_state_dict(
+        torch.load(
+            os.path.join(cfg.stage1_ckpt_dir, f"imageproj-{cfg.stage1_ckpt_step}.pth"),
+            map_location="cpu",
+        ),
+        strict=False
+    )
+    reference_unet.load_state_dict(
+        torch.load(
+            os.path.join(cfg.stage1_ckpt_dir, f"reference_unet-{cfg.stage1_ckpt_step}.pth"),
+            map_location="cpu",
+        ),
+        strict=False
+    )
+
     # Freeze
     vae.requires_grad_(False)
     imageproj.requires_grad_(False)
     reference_unet.requires_grad_(False)
     denoising_unet.requires_grad_(False)
     face_locator.requires_grad_(False)
-    audioproj.requires_grad_(False)
+    audioproj.requires_grad_(True)
 
     # Set motion module learnable
     trainable_modules = cfg.trainable_para
@@ -613,17 +642,31 @@ def train_stage2_process(cfg: argparse.Namespace) -> None:
         imageproj,
         audioproj,
     ).to(dtype=weight_dtype)
+    model_keys_to_load = [
+        'reference_unet', 
+        'denoising_unet', 
+        'face_locator', 
+        'imageproj'
+    ]
+    checkpoint = torch.load(os.path.join(cfg.audio_ckpt_dir, "net.pth"), map_location="cpu")
+    # 创建一个空字典，存储需要加载的层的权重
+    filtered_state_dict = {k: v for k, v in checkpoint.items() if k.split('.')[0] in model_keys_to_load}
+    # 加载过滤后的参数
+    missing_keys, unexpected_keys = net.load_state_dict(filtered_state_dict, strict=False)
 
-    m,u = net.load_state_dict(
-        torch.load(
-            os.path.join(cfg.audio_ckpt_dir, "net.pth"),
-            map_location="cpu",
-        ),
-        strict=False
-    )
+    # 输出缺失的键和意外的键
+    logger.info(f"missing key: {missing_keys}")
+    logger.info(f"unexpected key: {unexpected_keys}")
+    # m,u = net.load_state_dict(
+    #     torch.load(
+    #         os.path.join(cfg.audio_ckpt_dir, "net.pth"),
+    #         map_location="cpu",
+    #     ),
+    #     strict=False
+    # )
 
-    logger.info(f"missing key: {m}")
-    logger.info(f"unexcepted key: {u}")
+    # logger.info(f"missing key: {m}")
+    # logger.info(f"unexcepted key: {u}")
 
     # get noise scheduler
     train_noise_scheduler, val_noise_scheduler = get_noise_scheduler(cfg)
@@ -984,6 +1027,10 @@ def train_stage2_process(cfg: argparse.Namespace) -> None:
                 reference_control_writer.clear()
                 progress_bar.update(1)
                 global_step += 1
+                # loss
+                writer.add_scalar("Train/Loss", train_loss, global_step)
+                # lr
+                writer.add_scalar("Train/Learning Rate", lr_scheduler.get_last_lr()[0], global_step)                
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
 

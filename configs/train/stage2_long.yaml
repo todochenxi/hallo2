@@ -1,15 +1,15 @@
 data:
-  train_bs: 4
+  train_bs: 1
   val_bs: 1
-  train_width: 128
-  train_height: 128
+  train_width: 512
+  train_height: 512
   fps: 25
   sample_rate: 16000
   n_motion_frames: 2
   n_sample_frames: 14
   audio_margin: 2
   train_meta_paths:
-    - "./data/test_stage2.json"
+    - "./data/images_stage2.json"
 
 wav2vec_config:
   audio_type: "vocals" # audio vocals
@@ -25,7 +25,7 @@ solver:
   mixed_precision: "no"
   enable_xformers_memory_efficient_attention: True
   gradient_checkpointing: True
-  max_train_steps: 10
+  max_train_steps: 30000
   max_grad_norm: 1.0
   # lr
   learning_rate: 1e-5
@@ -41,7 +41,7 @@ solver:
   adam_epsilon: 1.0e-8
 
 val:
-  validation_steps: 2
+  validation_steps: 100
 
 noise_scheduler_kwargs:
   num_train_timesteps: 1000
@@ -83,7 +83,7 @@ unet_additional_kwargs:
 
   
 trainable_para:
-  # - audio_modules
+  - audio_modules
   - motion_modules
 
 base_model_path: "./pretrained_models/stable-diffusion-v1-5/"
@@ -112,14 +112,18 @@ mask_rate: 0.25
 
 seed: 42
 resume_from_checkpoint: "latest"
-checkpointing_steps: 2
+checkpointing_steps: 100
 
 exp_name: "stage2_long"
-output_dir: "./test_exp_output"
+output_dir: "/data/models/hallo/test3"
 
 ref_img_path:
   - "./examples/reference_images/1.jpg"
 audio_path:
   - "./examples/driving_audios/1.wav"
+
+# stage1
+stage1_ckpt_dir: '/data/models/hallo/test2/stage1/modules/'
+stage1_ckpt_step: 13500
 
 

@@ -689,6 +689,10 @@ def train_stage1_process(cfg: argparse.Namespace) -> None:
                 reference_control_writer.clear()
                 progress_bar.update(1)
                 global_step += 1
+                # loss
+                writer.add_scalar("Train/Loss", train_loss, global_step)
+                # lr
+                writer.add_scalar("Train/Learning Rate", lr_scheduler.get_last_lr()[0], global_step)                
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
                 if global_step % cfg.checkpointing_steps == 0 or global_step == cfg.solver.max_train_steps:

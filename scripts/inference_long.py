@@ -389,6 +389,7 @@ def inference_process(args: argparse.Namespace):
                 dtype=source_image_pixels.dtype, device=source_image_pixels.device)
             pixel_values_ref_img = torch.cat(
                 [source_image_pixels, motion_zeros], dim=0)  # concat the ref image and the first motion frames
+            
         else:
             motion_frames = tensor_result[-1][0]
             motion_frames = motion_frames.permute(1, 0, 2, 3)

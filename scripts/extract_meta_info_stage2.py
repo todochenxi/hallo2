@@ -74,7 +74,8 @@ def construct_paths(video_path: str, base_dir: str, new_dir: str, new_ext: str) 
     Returns:
         str: The constructed path.
     """
-    return str(video_path).replace(base_dir, new_dir).replace(".mp4", new_ext)
+    # return str(video_path).replace(base_dir, new_dir).replace(".mp4", new_ext)
+    return str(video_path).replace(base_dir, new_dir) + new_ext
 
 
 def extract_meta_info(video_path: str, dataset_name) -> dict:
@@ -127,9 +128,9 @@ def extract_meta_info(video_path: str, dataset_name) -> dict:
         assert_flag = False
 
     # video_frames = VideoReader(video_path, ctx=cpu(0))
-    dirname = os.path.dirname(os.path.dirname(video_path))
-    basename = os.path.basename(video_path.replace(".mp4", ""))
-    images_path = os.path.join(dirname, "images", basename)
+    # dirname = os.path.dirname(os.path.dirname(video_path))
+    # basename = os.path.basename(video_path.replace(".mp4", ""))
+    images_path = video_path
     frames_lens = len(os.listdir(images_path))
     audio_emb = torch.load(vocal_emb_base_all)
     print(frames_lens, audio_emb.shape)
@@ -177,11 +178,12 @@ def main():
 
     video_dir = Path(args.root_path) / args.dataset_name
     video_paths = get_video_paths(video_dir, [".mp4"])
-
+    image_paths = sorted(os.path.join(args.root_path, "images",str(image_file)) for image_file in os.listdir(Path(args.root_path) / "images"))
     meta_infos = []
 
-    for video_path in tqdm(video_paths, desc="Extracting meta info"):
-        meta_info = extract_meta_info(video_path, args.dataset_name)
+    for image_path in tqdm(image_paths, desc="Extracting meta info"):
+        # print(image_path)
+        meta_info = extract_meta_info(image_path, args.dataset_name)
         if meta_info:
             meta_infos.append(meta_info)
 

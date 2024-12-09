@@ -330,7 +330,7 @@ accelerate launch -m \
   --main_process_ip 0.0.0.0 \
   --main_process_port 20055 \
   --num_machines 1 \
-  --num_processes 2 \
+  --num_processes 4 \
   scripts.train_stage1 --config ./configs/train/stage1.yaml
 ```
 

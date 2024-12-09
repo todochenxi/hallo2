@@ -169,3 +169,9 @@ pretrained_models
 test_data
 output_long
 hq_results
+
+# train
+log
+exp_output
+data
+nohup.out
