@@ -282,6 +282,7 @@ def log_validation(
     global_step: int = 0,
     times: int = None,
     face_analysis_model_path: str = "",
+    in_s1=False
 ) -> None:
     """
     Log validation video during the training process.
@@ -455,7 +456,10 @@ def log_validation(
         # video
         video_tensor = tensor_result.permute(1, 0, 2, 3).cpu().numpy()
         video_tensor = np.clip(video_tensor * 255, 0, 255).astype(np.uint8)
-        writer.add_video(f"{global_step}_{ref_name}_{audio_name}.mp4", torch.tensor(video_tensor).unsqueeze(0), global_step=global_step, fps=25)
+        if in_s1:
+            return video_tensor
+        else:
+            writer.add_video(f"{global_step}_{ref_name}_{audio_name}.mp4", torch.tensor(video_tensor).unsqueeze(0), global_step=global_step, fps=25)
         # audio
         # 读取 WAV 文件
         # waveform, sample_rate = torchaudio.load(audio_path)

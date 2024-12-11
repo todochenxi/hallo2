@@ -94,3 +94,7 @@ noise_scheduler_kwargs:
   timestep_spacing: "trailing"
 
 sampler: DDIM
+
+# test
+stage1_ckpt_dir: "./pretrained_models/train_models"
+stage1_ckpt_step: 13500

@@ -1,12 +1,25 @@
 data:
-  train_bs: 8
+  train_bs: 4
   train_width: 512
   train_height: 512
+  fps: 25
+  sample_rate: 16000
+  n_motion_frames: 2  
+  n_sample_frames: 14
   meta_paths:
     - "./data/videos_stage1.json"
   # Margin of frame indexes between ref and tgt images
   sample_margin: 30
 
+wav2vec_config:
+  audio_type: "vocals" # audio vocals
+  model_scale: "base" # base large
+  features: "all" # last avg all
+  model_path: ./pretrained_models/wav2vec/wav2vec2-base-960h
+
+audio_separator:
+  model_path: ./pretrained_models/audio_separator/Kim_Vocal_2.onnx
+face_expand_ratio: 1.2
 solver:
   gradient_accumulation_steps: 1
   mixed_precision: "no"
@@ -57,7 +70,11 @@ output_dir: "/data/models/hallo/test2/"
 
 ref_image_paths:
   - "examples/reference_images/1.jpg"
+audio_path:
+  - "./examples/driving_audios/1.wav"  
 
 mask_image_paths:
   - "examples/masks/1_offset.png"
 
+use_mask: true
+mask_rate: 0.25

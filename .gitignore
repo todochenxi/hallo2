@@ -175,3 +175,4 @@ log
 exp_output
 data
 nohup.out
+test_exp_output/

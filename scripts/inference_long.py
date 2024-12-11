@@ -178,7 +178,7 @@ def inference_process(args: argparse.Namespace):
     source_image_path = config.source_image
     driving_audio_path = config.driving_audio
 
-    save_path = os.path.join(config.save_path, Path(source_image_path).stem)
+    save_path = os.path.join(config.save_path, Path(source_image_path).stem, "all")
     save_seg_path = os.path.join(save_path, "seg_video")
     print("save path: ", save_path)
     
@@ -306,7 +306,34 @@ def inference_process(args: argparse.Namespace):
 
     audio_ckpt_dir = config.audio_ckpt_dir
 
-
+    # denoising_unet.load_state_dict(
+    #     torch.load(
+    #         os.path.join(config.stage1_ckpt_dir, f"denoising_unet-{config.stage1_ckpt_step}.pth"),
+    #         map_location="cpu",
+    #     ),
+    #     strict=False
+    # )
+    # face_locator.load_state_dict(
+    #     torch.load(
+    #         os.path.join(config.stage1_ckpt_dir, f"face_locator-{config.stage1_ckpt_step}.pth"),
+    #         map_location="cpu",
+    #     ),
+    #     strict=False
+    # )
+    # image_proj.load_state_dict(
+    #     torch.load(
+    #         os.path.join(config.stage1_ckpt_dir, f"imageproj-{config.stage1_ckpt_step}.pth"),
+    #         map_location="cpu",
+    #     ),
+    #     strict=False
+    # )
+    # reference_unet.load_state_dict(
+    #     torch.load(
+    #         os.path.join(config.stage1_ckpt_dir, f"reference_unet-{config.stage1_ckpt_step}.pth"),
+    #         map_location="cpu",
+    #     ),
+    #     strict=False
+    # )       
     # Freeze
     vae.requires_grad_(False)
     image_proj.requires_grad_(False)
@@ -325,7 +352,34 @@ def inference_process(args: argparse.Namespace):
         image_proj,
         audio_proj,
     )
+    # model_keys_to_load = [
+    #     'reference_unet', 
+    #     'denoising_unet', 
+    #     'face_locator', 
+    #     'imageproj'
+    # ]
+    # checkpoint = torch.load(os.path.join(audio_ckpt_dir, "net.pth"), map_location="cpu")
+    # # 创建一个空字典，存储需要加载的层的权重
+    # filtered_state_dict = {k: v for k, v in checkpoint.items() if k.split('.')[0] in model_keys_to_load}
+    # # 加载过滤后的参数
+    # missing_keys, unexpected_keys = net.load_state_dict(filtered_state_dict, strict=False)
 
+    # # 输出缺失的键和意外的键
+    # print(f"missing key: {missing_keys}")
+    # print(f"unexpected key: {unexpected_keys}")
+    # state_dict = torch.load(
+    #         os.path.join(audio_ckpt_dir, f"net.pth"),
+    #         map_location="cpu",
+    # )
+    # state_dict_new = {}
+    # for key in state_dict:
+    #     if "motion_modules" in key:
+    #         state_dict_new[key] = net.state_dict()[key]
+    #     else:
+    #         state_dict_new[key] = state_dict[key]
+    # m, u = net.load_state_dict(state_dict_new)
+    # print(f"missing key: {m}")
+    # print(f"unexpected key: {u}")
     m,u = net.load_state_dict(
         torch.load(
             os.path.join(audio_ckpt_dir, f"net.pth"),
@@ -335,6 +389,7 @@ def inference_process(args: argparse.Namespace):
     assert len(m) == 0 and len(u) == 0, "Fail to load correct checkpoint."
     print("loaded weight from ", os.path.join(audio_ckpt_dir, "net.pth"))
 
+ 
     # 5. inference
     pipeline = FaceAnimatePipeline(
         vae=vae,

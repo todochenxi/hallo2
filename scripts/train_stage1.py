@@ -57,7 +57,8 @@ from hallo.utils.util import (compute_snr, delete_additional_ckpt,
                               import_filename, init_output_dir,
                               load_checkpoint, move_final_checkpoint,
                               save_checkpoint, seed_everything)
-
+from hallo.models.audio_proj import AudioProjModel
+from scripts.train_stage2_long import log_validation as s2_log_validation
 warnings.filterwarnings("ignore")
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
@@ -284,6 +285,40 @@ def log_validation(
         canvas_tensor = torch.from_numpy(canvas_np).permute(2, 0, 1).float() / 255.0
         writer.add_image(f"{global_step:06d}-{ref_name}_{mask_name}.jpg", canvas_tensor, global_step)
 
+    if global_step %  5000 == 0 or global_step == 1:
+        net.audioproj =  AudioProjModel(
+            seq_len=5,
+            blocks=12,
+            channels=768,
+            intermediate_dim=512,
+            output_dim=768,
+            context_tokens=32,
+        ).to(device="cuda", dtype=cfg.weight_dtype)
+        # to zero
+        state_dict_new = {}
+        for key in net.state_dict():
+            if not "audioproj" in key and "audio_modules" in key:
+                state_dict_new[key] = net.state_dict()[key]
+            else:
+                state_dict_new[key] = torch.zeros_like(net.stage_dict()[key])
+        net.load_state_dict(state_dict_new)
+        video_tensor = s2_log_validation(
+            accelerator=accelerator,
+            vae=vae,
+            net=net,
+            scheduler=scheduler,
+            width=width,
+            height=height,
+            clip_length=cfg.data.n_sample_frames,
+            cfg=cfg,
+            save_dir=save_dir,
+            global_step=global_step,
+            times=10,
+            face_analysis_model_path=face_analysis_model_path,
+            in_s1=True
+        )
+        audio_name = os.path.basename(cfg.audio_path).split('.')[0]
+        writer.add_video(f"{global_step}_{ref_name}_{audio_name}.mp4", torch.tensor(video_tensor).unsqueeze(0), global_step=global_step, fps=25)
     del pipe
     del ori_net
     torch.cuda.empty_cache()
