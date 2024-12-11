@@ -331,12 +331,12 @@ class FaceAnimatePipeline(DiffusionPipeline):
         # Prepare ref image latents
         ref_image_tensor = rearrange(ref_image, "b f c h w -> (b f) c h w")
         ref_image_tensor = self.ref_image_processor.preprocess(ref_image_tensor, height=height, width=width)  # (bs, c, width, height)
-        ref_image_tensor = ref_image_tensor.to(dtype=self.vae.dtype, device=self.vae.device)
+        ref_image_tensor = ref_image_tensor.to(device=self.vae.device, dtype=self.vae.dtype)
         ref_image_latents = self.vae.encode(ref_image_tensor).latent_dist.mean
         ref_image_latents = ref_image_latents * 0.18215  # (b, 4, h, w)
 
 
-        face_mask = face_mask.unsqueeze(1).to(dtype=self.face_locator.dtype, device=self.face_locator.device) # (bs, f, c, H, W)
+        face_mask = face_mask.unsqueeze(1).to(device=self.face_locator.device, dtype=self.face_locator.dtype) # (bs, f, c, H, W)
         face_mask = repeat(face_mask, "b f c h w -> b (repeat f) c h w", repeat=video_length)
         face_mask = face_mask.transpose(1, 2)  # (bs, c, f, H, W)
         face_mask = self.face_locator(face_mask)
@@ -376,7 +376,7 @@ class FaceAnimatePipeline(DiffusionPipeline):
 
         uncond_audio_tensor = torch.zeros_like(audio_tensor)
         audio_tensor = torch.cat([uncond_audio_tensor, audio_tensor], dim=0)
-        audio_tensor = audio_tensor.to(dtype=self.denoising_unet.dtype, device=self.denoising_unet.device)
+        audio_tensor = audio_tensor.to(device=self.denoising_unet.device, dtype=self.denoising_unet.dtype)
 
         # denoising loop
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order

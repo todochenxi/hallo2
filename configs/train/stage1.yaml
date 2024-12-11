@@ -41,7 +41,8 @@ solver:
   adam_epsilon: 1.0e-8
 
 val:
-  validation_steps: 1000
+  validation_steps: 1
+  s2_validation_steps: 1
 
 noise_scheduler_kwargs:
   num_train_timesteps: 1000
@@ -65,6 +66,7 @@ face_locator_pretrained: False
 seed: 42
 resume_from_checkpoint: "latest"
 checkpointing_steps: 1000
+checkpoint_num: 30
 exp_name: "stage1"
 output_dir: "/data/models/hallo/test2/"
 

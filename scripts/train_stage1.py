@@ -285,7 +285,7 @@ def log_validation(
         canvas_tensor = torch.from_numpy(canvas_np).permute(2, 0, 1).float() / 255.0
         writer.add_image(f"{global_step:06d}-{ref_name}_{mask_name}.jpg", canvas_tensor, global_step)
 
-    if global_step %  5000 == 0 or global_step == 1:
+    if global_step %  cfg.val.s2_validation_steps == 0 or global_step == 1:
         net.audioproj =  AudioProjModel(
             seq_len=5,
             blocks=12,
@@ -643,7 +643,7 @@ def train_stage1_process(cfg: argparse.Namespace) -> None:
 
                 with torch.no_grad():
                     ref_img = torch.stack(ref_image_list, dim=0).to(
-                        dtype=vae.dtype, device=vae.device
+                        device=vae.device, dtype=vae.dtype
                     )
                     ref_image_latents = vae.encode(
                         ref_img
@@ -651,7 +651,7 @@ def train_stage1_process(cfg: argparse.Namespace) -> None:
                     ref_image_latents = ref_image_latents * 0.18215
 
                     face_emb = torch.stack(face_emb_list, dim=0).to(
-                        dtype=imageproj.dtype, device=imageproj.device
+                        device=imageproj.device, dtype=imageproj.dtype
                     )
 
                 # add noise
@@ -745,28 +745,28 @@ def train_stage1_process(cfg: argparse.Namespace) -> None:
                             module_dir,
                             "reference_unet",
                             global_step,
-                            total_limit=3,
+                            total_limit=cfg.checkpoint_num,
                         )
                         save_checkpoint(
                             unwrap_net.imageproj,
                             module_dir,
                             "imageproj",
                             global_step,
-                            total_limit=3,
+                            total_limit=cfg.checkpoint_num,
                         )
                         save_checkpoint(
                             unwrap_net.denoising_unet,
                             module_dir,
                             "denoising_unet",
                             global_step,
-                            total_limit=3,
+                            total_limit=cfg.checkpoint_num,
                         )
                         save_checkpoint(
                             unwrap_net.face_locator,
                             module_dir,
                             "face_locator",
                             global_step,
-                            total_limit=3,
+                            total_limit=cfg.checkpoint_num,
                         )
 
                 if global_step % cfg.val.validation_steps == 0 or global_step == 1:
